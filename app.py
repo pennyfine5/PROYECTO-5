@@ -232,7 +232,7 @@ if len(surf) >= 2 and len(ultimate) >= 2:
     equal_var = p_levene > 0.05
     stat, p_value = ttest_ind(surf, ultimate, equal_var=equal_var)
 
-    st.write(f"P-valor: **{p_value:.4f}**")
+    st.write(f"P-valor: **{p_value:.15f}**")
 
     if p_value < 0.05:
         st.success("Existe diferencia estadísticamente significativa entre los planes")
