@@ -31,18 +31,19 @@ def load_data():
     df_plans = pd.read_csv("datasets/megaline_plans.csv")
     df_users = pd.read_csv("datasets/megaline_users.csv")
 
-    # --- Limpieza ---
+    # Normalización
     df_plans['plan_name'] = df_plans['plan_name'].str.capitalize()
     df_users['plan'] = df_users['plan'].str.capitalize()
     df_users['churn_date'] = df_users['churn_date'].fillna('Usuario activo')
 
-    # --- Tipos ---
+    # Tipos
     df_calls['call_date'] = pd.to_datetime(df_calls['call_date'])
     df_messages['message_date'] = pd.to_datetime(df_messages['message_date'])
     df_internet['session_date'] = pd.to_datetime(df_internet['session_date'])
     df_users['reg_date'] = pd.to_datetime(df_users['reg_date'])
 
-    df_internet['mb_used'] = df_internet['mb_used'] / 1024  # GB
+    # MB → GB
+    df_internet['mb_used'] = df_internet['mb_used'] / 1024
 
     return df_calls, df_messages, df_internet, df_plans, df_users
 
@@ -55,22 +56,20 @@ def build_monthly_usage(df_calls, df_messages, df_internet):
     df_calls['year_month'] = df_calls['call_date'].dt.to_period('M')
     df_calls['duration'] = np.ceil(df_calls['duration'])
 
-    calls = df_calls.groupby(
-        ['user_id', 'year_month']
-    ).agg(
+    calls = df_calls.groupby(['user_id', 'year_month']).agg(
         calls_count=('duration', 'size'),
         minutes_used=('duration', 'sum')
     ).reset_index()
 
     df_messages['year_month'] = df_messages['message_date'].dt.to_period('M')
-    messages = df_messages.groupby(
-        ['user_id', 'year_month']
-    ).size().reset_index(name='messages_count')
+    messages = df_messages.groupby(['user_id', 'year_month']).size().reset_index(
+        name='messages_count'
+    )
 
     df_internet['year_month'] = df_internet['session_date'].dt.to_period('M')
-    internet = df_internet.groupby(
-        ['user_id', 'year_month']
-    )['mb_used'].sum().reset_index(name='vol_count')
+    internet = df_internet.groupby(['user_id', 'year_month'])['mb_used'].sum().reset_index(
+        name='vol_count'
+    )
 
     df = calls.merge(messages, how='outer')
     df = df.merge(internet, how='outer')
@@ -108,31 +107,25 @@ def calculate_revenue(df, df_users, df_plans):
 
 
 # =========================
-# CARGAR DATA
+# CARGA DATA
 # =========================
 df_calls, df_messages, df_internet, df_plans, df_users = load_data()
 df_usage = build_monthly_usage(df_calls, df_messages, df_internet)
 df_final = calculate_revenue(df_usage, df_users, df_plans)
 
 # =========================
-# SIDEBAR – FILTROS PRO
+# SIDEBAR – FILTROS
 # =========================
 st.sidebar.title("🎛️ Filtros de Análisis")
 
-# --- Filtro por plan ---
 plans = ['Todos'] + sorted(df_final['plan'].unique().tolist())
-selected_plan = st.sidebar.selectbox(
-    "Selecciona el plan",
-    plans
-)
+selected_plan = st.sidebar.selectbox("Selecciona el plan", plans)
 
-# --- Filtro por estado del usuario ---
 user_status = st.sidebar.radio(
     "Estado del usuario",
     ["Todos", "Activos", "Churn"]
 )
 
-# --- Filtro por rango de ingresos ---
 min_rev, max_rev = st.sidebar.slider(
     "Rango de ingresos mensuales ($)",
     float(df_final['monthly_revenue'].min()),
@@ -172,33 +165,36 @@ st.markdown("Análisis exploratorio, ingresos y pruebas estadísticas")
 # =========================
 st.subheader("📊 KPIs Clave")
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Usuarios activos", df_filtered['user_id'].nunique())
-col2.metric("Ingreso total", f"${df_filtered['monthly_revenue'].sum():,.0f}")
-col3.metric("Ingreso promedio mensual", f"${df_filtered['monthly_revenue'].mean():.2f}")
+c1, c2, c3 = st.columns(3)
+c1.metric("Usuarios", df_filtered['user_id'].nunique())
+c2.metric("Ingreso total", f"${df_filtered['monthly_revenue'].sum():,.0f}")
+c3.metric("Ingreso promedio", f"${df_filtered['monthly_revenue'].mean():.2f}")
 
 # =========================
-# CONSUMO DE MINUTOS
+# DISTRIBUCIÓN DE MINUTOS
 # =========================
 st.subheader("📞 Distribución de minutos mensuales")
 
 fig, ax = plt.subplots(figsize=(10, 5))
 sns.histplot(
-    data=df_final,
+    data=df_filtered,
     x='minutes_used',
     hue='plan',
     bins=30,
-    alpha=0.6,
+    element="step",
+    stat="density",
+    common_norm=False,
     ax=ax
 )
 st.pyplot(fig)
+plt.close()
 
 # =========================
 # CONSUMO DE INTERNET
 # =========================
 st.subheader("🌐 Consumo de Internet (GB)")
 
-fig, ax = plt.subplots(figsize=(10, 5))
+fig, ax = plt.subplots(figsize=(8, 5))
 sns.boxplot(
     data=df_filtered,
     x='plan',
@@ -206,13 +202,14 @@ sns.boxplot(
     ax=ax
 )
 st.pyplot(fig)
+plt.close()
 
 # =========================
 # INGRESOS
 # =========================
 st.subheader("💰 Ingresos mensuales por plan")
 
-fig, ax = plt.subplots(figsize=(10, 5))
+fig, ax = plt.subplots(figsize=(8, 5))
 sns.boxplot(
     data=df_filtered,
     x='plan',
@@ -220,6 +217,7 @@ sns.boxplot(
     ax=ax
 )
 st.pyplot(fig)
+plt.close()
 
 # =========================
 # PRUEBA DE HIPÓTESIS
@@ -229,28 +227,19 @@ st.subheader("🧪 Prueba de hipótesis: Ingresos por plan")
 surf = df_filtered[df_filtered['plan'] == 'Surf']['monthly_revenue']
 ultimate = df_filtered[df_filtered['plan'] == 'Ultimate']['monthly_revenue']
 
-if len(surf) < 2 or len(ultimate) < 2:
-    st.warning("No hay suficientes datos para realizar la prueba estadística.")
-    st.stop()
-    
-st.markdown("### 📊 Indicadores Clave")
+if len(surf) >= 2 and len(ultimate) >= 2:
+    _, p_levene = levene(surf, ultimate)
+    equal_var = p_levene > 0.05
+    stat, p_value = ttest_ind(surf, ultimate, equal_var=equal_var)
 
-st.caption(
-    f"Filtros aplicados → Plan: {selected_plan} | Estado: {user_status}"
-)
+    st.write(f"P-valor: **{p_value:.4f}**")
 
-
-_, p_levene = levene(surf, ultimate)
-
-equal_var = p_levene > 0.05
-stat, p_value = ttest_ind(surf, ultimate, equal_var=equal_var)
-
-st.write(f"P-valor: **{p_value:.4f}**")
-
-if p_value < 0.05:
-    st.success("Existe diferencia estadísticamente significativa entre los planes")
+    if p_value < 0.05:
+        st.success("Existe diferencia estadísticamente significativa entre los planes")
+    else:
+        st.info("No se detecta diferencia estadísticamente significativa")
 else:
-    st.info("No se detecta diferencia estadísticamente significativa")
+    st.warning("Datos insuficientes para realizar la prueba.")
 
 # =========================
 # CONCLUSIONES
@@ -259,7 +248,6 @@ st.header("📌 Conclusiones")
 
 st.markdown("""
 - El plan **Ultimate** genera mayor ingreso promedio por usuario.
-- El consumo de internet es **muy similar entre planes**, lo que indica
-  una estrategia de monetización basada en cargos adicionales.
-- La diferencia de ingresos es **estadísticamente significativa**.
+- El consumo de internet es similar entre planes.
+- La diferencia de ingresos resulta **estadísticamente significativa**.
 """)
