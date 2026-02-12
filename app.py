@@ -45,7 +45,7 @@ def load_data():
     # MB → GB
     df_internet['mb_used'] = df_internet['mb_used'] / 1024
 
-    return df_calls, df_messages, df_intearnet, df_plans, df_users
+    return df_calls, df_messages, df_internet, df_plans, df_users
 
 
 # =========================
