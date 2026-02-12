@@ -250,11 +250,23 @@ plt.close()
 # =========================
 # DISTRIBUCIÓN DE MINUTOS
 # =========================
-st.subheader("📞 Distribución de minutos mensuales")
+st.subheader("📞 Distribución de minutos")
+
+# Base filtrada
+df_minutes = df_filtered.copy()
+
+# Si el periodo es anual, agregamos minutos por usuario y año
+if period == "Anual":
+    df_minutes['year'] = df_minutes['year_month'].dt.year
+    df_minutes = (
+        df_minutes
+        .groupby(['user_id', 'plan', 'year'], as_index=False)
+        .agg(minutes_used=('minutes_used', 'sum'))
+    )
 
 fig, ax = plt.subplots(figsize=(10, 5))
 sns.histplot(
-    data=df_filtered,
+    data=df_minutes,
     x='minutes_used',
     hue='plan',
     bins=30,
@@ -263,6 +275,13 @@ sns.histplot(
     common_norm=False,
     ax=ax
 )
+
+ax.set_xlabel(
+    "Minutos usados por año" if period == "Anual" else "Minutos usados por mes"
+)
+ax.set_ylabel("Densidad")
+ax.set_title(f"Distribución de minutos ({period.lower()})")
+
 st.pyplot(fig)
 plt.close()
 
