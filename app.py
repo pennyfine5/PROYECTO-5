@@ -114,50 +114,6 @@ df_usage = build_monthly_usage(df_calls, df_messages, df_internet)
 df_final = calculate_revenue(df_usage, df_users, df_plans)
 
 # =========================
-# CALCULO DE PERIODOS
-# =========================
-
-df_period = df_filtered.copy()
-
-if period == "Anual":
-    df_period['year'] = df_period['year_month'].dt.year
-    df_period = (
-        df_period
-        .groupby(['user_id', 'plan', 'year'], as_index=False)
-        .agg(monthly_revenue=('monthly_revenue', 'sum'))
-    )
-
-# =========================
-# CACULO RENTABILIDAD POR USUARIO
-# =========================
-
-annual = (
-    df_final
-    .assign(year=df_final['year_month'].dt.year)
-    .groupby(['user_id', 'plan', 'year'], as_index=False)
-    .agg(annual_revenue=('monthly_revenue', 'sum'))
-)
-
-summary = (
-    annual
-    .groupby('plan')
-    .agg(
-        users=('user_id', 'nunique'),
-        avg_annual_revenue=('annual_revenue', 'mean')
-    )
-)
-
-surf_users = summary.loc['Surf', 'users']
-ultimate_users = summary.loc['Ultimate', 'users']
-
-surf_avg = summary.loc['Surf', 'avg_annual_revenue']
-ultimate_avg = summary.loc['Ultimate', 'avg_annual_revenue']
-
-diff = ultimate_avg - surf_avg
-
-
-
-# =========================
 # SIDEBAR – FILTROS
 # =========================
 
@@ -211,6 +167,51 @@ df_filtered = df_filtered[
 # =========================
 st.title("📡 Reporte de Investigación – Telecomunicaciones")
 st.markdown("Análisis exploratorio, ingresos y pruebas estadísticas")
+
+
+# =========================
+# CALCULO DE PERIODOS
+# =========================
+
+df_period = df_filtered.copy()
+
+if period == "Anual":
+    df_period['year'] = df_period['year_month'].dt.year
+    df_period = (
+        df_period
+        .groupby(['user_id', 'plan', 'year'], as_index=False)
+        .agg(monthly_revenue=('monthly_revenue', 'sum'))
+    )
+
+# =========================
+# CACULO RENTABILIDAD POR USUARIO
+# =========================
+
+annual = (
+    df_final
+    .assign(year=df_final['year_month'].dt.year)
+    .groupby(['user_id', 'plan', 'year'], as_index=False)
+    .agg(annual_revenue=('monthly_revenue', 'sum'))
+)
+
+summary = (
+    annual
+    .groupby('plan')
+    .agg(
+        users=('user_id', 'nunique'),
+        avg_annual_revenue=('annual_revenue', 'mean')
+    )
+)
+
+surf_users = summary.loc['Surf', 'users']
+ultimate_users = summary.loc['Ultimate', 'users']
+
+surf_avg = summary.loc['Surf', 'avg_annual_revenue']
+ultimate_avg = summary.loc['Ultimate', 'avg_annual_revenue']
+
+diff = ultimate_avg - surf_avg
+
+
 
 # =========================
 # KPIs
