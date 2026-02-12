@@ -246,7 +246,6 @@ ax.set_title(f"Ingresos {period.lower()}es por plan")
 st.pyplot(fig)
 plt.close()
 
-st.subheader("📈 Rentabilidad por usuario (anual)")
 
 # =========================
 # DISTRIBUCIÓN DE MINUTOS
@@ -283,19 +282,38 @@ st.pyplot(fig)
 plt.close()
 
 # =========================
-# INGRESOS
+# MENSAJES MENSUALES / ANUALES
 # =========================
-st.subheader("💰 Ingresos mensuales por plan")
+st.subheader("💬 Uso de mensajes por plan")
+
+df_msgs = df_filtered.copy()
+
+if period == "Anual":
+    df_msgs['year'] = df_msgs['year_month'].dt.to_timestamp().dt.year
+    df_msgs = (
+        df_msgs
+        .groupby(['user_id', 'plan', 'year'], as_index=False)
+        .agg(messages_count=('messages_count', 'sum'))
+    )
+    y_label = "Mensajes anuales"
+else:
+    y_label = "Mensajes mensuales"
 
 fig, ax = plt.subplots(figsize=(8, 5))
 sns.boxplot(
-    data=df_filtered,
+    data=df_msgs,
     x='plan',
-    y='monthly_revenue',
+    y='messages_count',
     ax=ax
 )
+
+ax.set_title(f"Mensajes {period.lower()}es por plan")
+ax.set_xlabel("Plan")
+ax.set_ylabel(y_label)
+
 st.pyplot(fig)
 plt.close()
+
 
 # =========================
 # PRUEBA DE HIPÓTESIS
