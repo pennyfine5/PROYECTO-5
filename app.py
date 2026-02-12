@@ -173,9 +173,9 @@ st.markdown("Análisis exploratorio, ingresos y pruebas estadísticas")
 st.subheader("📊 KPIs Clave")
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Usuarios activos", df_activos['user_id'].nunique())
-col2.metric("Ingreso total", f"${df_activos['monthly_revenue'].sum():,.0f}")
-col3.metric("Ingreso promedio mensual", f"${df_activos['monthly_revenue'].mean():.2f}")
+col1.metric("Usuarios activos", df_filtered['user_id'].nunique())
+col2.metric("Ingreso total", f"${df_filtered['monthly_revenue'].sum():,.0f}")
+col3.metric("Ingreso promedio mensual", f"${df_filtered['monthly_revenue'].mean():.2f}")
 
 # =========================
 # CONSUMO DE MINUTOS
@@ -200,7 +200,7 @@ st.subheader("🌐 Consumo de Internet (GB)")
 
 fig, ax = plt.subplots(figsize=(10, 5))
 sns.boxplot(
-    data=df_activos,
+    data=df_filtered,
     x='plan',
     y='vol_count',
     ax=ax
@@ -214,7 +214,7 @@ st.subheader("💰 Ingresos mensuales por plan")
 
 fig, ax = plt.subplots(figsize=(10, 5))
 sns.boxplot(
-    data=df_activos,
+    data=df_filtered,
     x='plan',
     y='monthly_revenue',
     ax=ax
@@ -226,8 +226,19 @@ st.pyplot(fig)
 # =========================
 st.subheader("🧪 Prueba de hipótesis: Ingresos por plan")
 
-surf = df_activos[df_activos['plan'] == 'Surf']['monthly_revenue']
-ultimate = df_activos[df_activos['plan'] == 'Ultimate']['monthly_revenue']
+surf = df_filtered[df_filtered['plan'] == 'Surf']['monthly_revenue']
+ultimate = df_filtered[df_filtered['plan'] == 'Ultimate']['monthly_revenue']
+
+if len(surf) < 2 or len(ultimate) < 2:
+    st.warning("No hay suficientes datos para realizar la prueba estadística.")
+    st.stop()
+    
+st.markdown("### 📊 Indicadores Clave")
+
+st.caption(
+    f"Filtros aplicados → Plan: {selected_plan} | Estado: {user_status}"
+)
+
 
 _, p_levene = levene(surf, ultimate)
 
